@@ -1,2 +1,2 @@
-from gym_examples.envs.puckworld import PuckWorldEnv
-from gym_examples.envs.gridworld import GridWorldEnv
+from rl_gym.envs.puckworld import PuckWorldEnv
+from rl_gym.envs.gridworld import GridWorldEnv
