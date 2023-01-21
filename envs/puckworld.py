@@ -19,12 +19,12 @@ from collections import deque
 from tqdm import tqdm
 import gc
 
-RAD2DEG = 57.29577951308232     # 弧度与角度换算关系1弧度=57.29..角度
+RAD2DEG = 57.29577951308232     
 
 class PuckWorldEnv(gym.Env):
     metadata = {
-        'render_modes': ['human', 'rgb_array'],
-        "fps": 30
+        'render.modes': ['human', 'rgb_array'],
+        "fps": 60
         }
 
     def __init__(self, render_mode=None, fps=0, reward1=True, reward2=True):
@@ -59,7 +59,7 @@ class PuckWorldEnv(gym.Env):
                             -self.l_unit,                  # good target position y
                             -self.l_unit,                  # bad target position x
                             -self.l_unit,                  # bad target position y
-                            ])   
+                            ], dtype=np.float32)   
         self.high = np.array([self.l_unit/2,                 
                             self.l_unit/2,
                             10*self.max_speed,    
@@ -68,8 +68,8 @@ class PuckWorldEnv(gym.Env):
                             self.l_unit,
                             self.l_unit,    
                             self.l_unit,
-                            ])   
-        self.observation_space = spaces.Box(self.low, self.high)    
+                            ], dtype=np.float32)   
+        self.observation_space = spaces.Box(self.low, self.high, dtype=np.float32)    
 
         # 0,1,2,3,4 represent left, right, up, down, -, five moves.
         self.action_space = spaces.Discrete(5)  
@@ -79,7 +79,7 @@ class PuckWorldEnv(gym.Env):
 
         #self._seed()    
 
-        assert render_mode is None or render_mode in self.metadata["render_modes"]
+        assert render_mode is None or render_mode in self.metadata["render.modes"]
         self.render_mode = render_mode
         self.window = None
         self.clock = None
@@ -96,10 +96,10 @@ class PuckWorldEnv(gym.Env):
     def _get_obs(self):
         (ppx, ppy, pvx, pvy, tx, ty, tx2, ty2) = self.state
         obs = (ppx - self.l_unit/2, ppy-self.l_unit/2, pvx*10, pvy*10, tx-ppx, ty-ppy, tx2-ppx, ty2-ppy)
-        return np.array(obs)
+        return np.array(obs, dtype=np.float32)
 
     def _get_info(self):
-        return {'state':np.array(self.state)}
+        return {'state':np.array(self.state, dtype=np.float32)}
 
     def step(self, action):
         assert self.action_space.contains(action), \
@@ -165,20 +165,20 @@ class PuckWorldEnv(gym.Env):
         if self.render_mode == "human":
             self._render_frame()
 
-        return self._get_obs(), self.reward, False, self.quit, self._get_info()
+        return self._get_obs(), self.reward, self.quit, self._get_info()
 
     def _random_pos(self):
-        return self.np_random.uniform(low = 0, high = self.l_unit)
+        return np.random.uniform(low = 0, high = self.l_unit)
 
     def _random_velocity(self):
-        r = self.np_random.uniform(low = 0, high = self.v_unit)
+        r = np.random.uniform(low = 0, high = self.v_unit)
         return 2*self.max_speed*(r - 0.5)
 
     def _compute_dis(self, dx, dy):
         return math.sqrt(math.pow(dx,2) + math.pow(dy,2))
 
     def reset(self, seed=None, options=None):
-        super().reset(seed=seed)
+        #super().reset(seed=seed)
         self.state = np.array([ self._random_pos(),         #agent x ppx
                                 self._random_pos(),         #agent y ppy
                                 self._random_velocity(),    #agent vx 
@@ -187,22 +187,21 @@ class PuckWorldEnv(gym.Env):
                                 self._random_pos(),         #good target y
                                 self._random_pos(),         #bad target x
                                 self._random_pos()          #bad target y
-                               ])
+                               ], dtype=np.float32)
 
         self.episode_score = 0
         self.quit = False
 
         observation = self._get_obs()
-        info = self._get_info()
+        #info = self._get_info()
 
-        if self.render_mode == "human":
-            self._render_frame()
+        #if self.render_mode == "human":
+        #    self._render_frame()
 
-        return self.state ,info   # np.array(self.state)
+        return observation   
 
-    def render(self):
-        if self.render_mode == "rgb_array":
-            return self._render_frame()
+    def render(self, mode=None):
+        self.render_mode=mode
 
     def _render_frame(self):
 
@@ -263,6 +262,7 @@ class PuckWorldEnv(gym.Env):
             pygame.quit()
             self.window=None
 
+
 if __name__ =="__main__":
     
     
@@ -279,13 +279,13 @@ if __name__ =="__main__":
         for _ in range(300):  #event in pygame.event.get(): #
             #if event.type == pygame.QUIT:
             #   break
-            env.render()
-            observation, reward, terminated, truncated, info = env.step(env.action_space.sample())
-            if terminated or truncated:
+            env.render(mode='human')
+            observation, reward, terminated, info = env.step(env.action_space.sample())
+            if terminated:
                 env.reset()
                 break
         env.reset()
-        if truncated:
+        if terminated:
             break
     env.close()
     print("env closed")
